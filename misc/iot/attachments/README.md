@@ -1,0 +1,3 @@
+A weird looking protocol ...
+
+nc localhost 8443

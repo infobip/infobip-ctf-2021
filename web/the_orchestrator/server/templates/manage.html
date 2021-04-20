@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Manage device from your browser{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="method">HTTP method</label>
+    <select name="method" id="method" value="{{ request.values['method'] }}" required>
+    	<option selected value="GET">GET</option>
+    </select>
+    <label for="url">URL</label>
+    <input name="url" id="url" value="{{ request.values['url'] or '/' }}" required>
+    <label for="body">Params</label>
+    <textarea name="body" id="body">{{ request.values['body'] or 'r=STATUS' }}</textarea>
+    <input type="submit" value="Save">
+    <p>{{ response }}</p>
+  </form>
+{% endblock %}

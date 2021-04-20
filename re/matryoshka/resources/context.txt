@@ -1,0 +1,21 @@
+Python 3.8.5 (default, Jul 28 2020, 12:59:40) 
+[GCC 9.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> passcode="58BDy81F" #AAAAAAAAAA
+>>> from hashlib import md5
+>>> md5(passcode.encode('utf-8')).hexdigest()
+'fd55c1d6f4a8a0df0e53513c2c8fb23d'
+>>> FLAG="ibctf{matryushk4-is-4-p0lygl0t}"
+>>> RESULT=''
+>>> m = md5(passcode.encode('utf-8')).hexdigest()
+>>> for i in range(31):
+...     RESULT += chr(ord(FLAG[i]) ^ ord(m[i]))
+... 
+>>> RESULT
+'\x0f\x06VA\x05J\tW\x12F\x18M\x12X\x0fR\x1d\x0cF\x1e\x01\x1cCS^\x1a_\nRFN'
+>>> from binascii import hexlify; hexlify(RESULT.encode('utf-8'))
+b'0f065641054a09571246184d12580f521d0c461e011c43535e1a5f0a52464e'
+>>> len('0f065641054a09571246184d12580f521d0c461e011c43535e1a5f0a52464e')
+62
+>>> 
+

@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Configuration{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <form method="post">
+    <label for="config">YAML config</label>
+    <textarea name="config" id="config">{{ request.values['config'] }}</textarea>
+    <label for="config_out">Current config</label>
+    <input type="submit" value="Save">
+    <p name="config_out">{{ config_out }}</p>
+  </form>
+{% endblock %}

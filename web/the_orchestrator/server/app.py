@@ -1,0 +1,85 @@
+from flask import Flask
+from flask import flash
+from flask import request
+from flask import redirect
+from flask import render_template
+from flask import url_for
+from ipaddress import IPv4Address
+
+import os
+import requests
+import socket
+import sys
+import yaml
+
+class Config:
+	def __init__(self, secret_key, o_id, device_host, host, port, flag=None):
+		self.SECRET_KEY = secret_key
+		self.orchestrator_id = o_id
+		self.device_host = device_host
+		self.host = host
+		self.port = port
+		self.__flag = flag or os.environ['FLAG']
+		self.__dict__ = {'SECRET_KEY': self.SECRET_KEY, 'orchestrator_id': self.orchestrator_id, 'device_host': device_host, 'host': self.host, 'port': self.port}
+		
+	def __str__(self):
+		return self.__repr__()
+		
+	def __repr__(self):
+		return str(self.__dict__)
+		
+
+DEFAULT_CONFIG = Config("dev", "9999", "10.0.0.1", "0.0.0.0", 5000)
+app = Flask(__name__, instance_relative_config=True)
+app_config = DEFAULT_CONFIG
+app.config.from_mapping(**app_config.__dict__)
+
+@app.route("/config", methods=["GET", "POST"])
+def config():
+	global app_config
+	config = app_config
+	ip = IPv4Address(request.remote_addr)
+	if not ip.is_loopback:
+		flash("Configuration is available only from the same host for your security")
+		return redirect(url_for('index'))
+
+	if request.method == "POST":
+		if "config" in request.values:
+			config = dict(**yaml.load(request.values["config"], Loader=yaml.Loader))
+			try:
+				if IPv4Address(config["device_host"]).is_loopback:
+					raise ValueError("can't be loopback")
+			except:
+				app_config.device_host = DEFAULT_CONFIG.device_host
+			flash("Config overwritten successfully, the changes will apply after restart")
+			
+	return render_template("config.html", config_out=config)
+			
+@app.route("/manage", methods=["GET", "POST"])
+def manage():
+	global app_config
+	response_out = ""
+	if request.method == "POST":
+		try:
+			response = requests.request(
+				request.values["method"],
+				url="http://" + app_config.device_host + request.values["url"],
+				data=request.values["body"].encode(),
+				headers={'Content-Type': 'application/x-www-form-urlencoded'},
+				timeout=5)
+			response_out += str(response.status_code) + "<br>"
+			response_out += response.text or "No content"
+		except:
+			flash("Unfortunately, your device does not seem to be live")
+			return redirect(url_for("manage"))
+
+	return render_template("manage.html", response=response_out)
+			
+@app.route("/docs", methods=["GET", "POST"])
+def docs():
+	return render_template("documentation.html")
+			
+@app.route("/", methods=["GET", "POST"])
+def index():
+	return render_template("welcome.html")
+

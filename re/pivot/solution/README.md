@@ -1,0 +1,146 @@
+# Solution
+
+This binary provides contestants with a real challenge - anti debugging, dead code and a stripped binary.
+
+The logic behind this one is a bit more tricky. The binary chooses a random "pivot" (number) and starts encrypting from the chosen line number. Key is not entirely baked into the code but it is derived from a constant number, which means that one can easily recalculate the RC4 key.
+
+One also needs to recognize that the encryption method used is RC4 and then bruteforce the pivot line so contestant can decrypt the rest of the file contents.
+
+## Recalculating the key
+
+There is an alphabet which is used to derive the key. The positions used for each key byte starts with a BAD_NUMO which is stored in a weird section of the binary.
+
+```
+>>> ABC="PQR9STrstuv5wxUV3WXL6MNO0abc2dYZABCDE4fghij7klmnF1GHIJKeo8pqyz"
+>>> BAD_NUMO=152; BAD_NUML=167
+>>> al=len(ABC)
+>>> nextc = BAD_NUMO % al
+>>> from binascii import unhexlify
+>>> longest=unhexlify('6cd83c40b320902f5da82f0881522331669b95eb82e425500d9bfb2b945fa271928284148a9fcc9afed878ec60')
+>>> len(longest)
+45
+>>> k = ''
+>>> for i in range(45):
+...     k += ABC[nextc]
+...     nextc = (BAD_NUML * nextc) % al
+... 
+>>> k
+'2bR0hmoISFXYGjtCEyfN3rvpUkAw6K2bR0hmoISFXYGjt'
+```
+
+Now that we have derived first 45 bytes of the key, we can just bruteforce all entries and see which one might have been the pivot:
+
+```
+>>> with open('important.bin', 'r') as fp:
+...     a = fp.read()
+... 
+>>> a = a.splitlines()
+>>> from Crypto.Cipher import ARC4
+>>> for i in a:
+...     i = unhexlify(i)
+...     print(ARC4.new(k[:len(i)]).decrypt(i))
+... 
+b'\xb3M\xf1 $\xf9\xc2=\x1d\xb2_y\x1ey\xe8\x98q\x1e\xde)\x97'
+b'\xe8\x08\x1b\xdc\xe4\x8b\xa1\x8e\xa5\xa2\x90\x87\xd8\xabf\x87\x8c\xf6aE\xd7\x10\xa2*IU'
+b'OQ\x1f\xbdY\xaa2t\xb8\xd9\xdf5\xf1\xd2\xb2\xd2\x11\x08\x89&SG&\xa0\xf6\xc3\xcf'
+b'this is a triumph'
+b'1\xfd\x88\x01\xda\x8b\r@\xb1B\x841\xde4O\xd7\xe6R\x0b"\x1f\xd7\x91\xea\xe0d\x0e\xe0\xdbk'
+b'n`\xcf\xe1KbP\x02\x92\xb1N\x16v\xa0\xbb>\xc8\x13\x1f\xee@\x8b'
+b'^\xba\x03\xcd\xd5\x84\xa0\xe1a`I\x9b\x9a\xfd\x92rY)1M\xb7\xfd\xf6L=0\x82\xf2\x89'
+b'4\xc8\xd0\x96\xda7G\xf6\x05\x9a\xa0\x1c\xa7\xb2\xbfn\xe2,L\xc9\xcaVQ\x8dl\x00`i\xc0\xb0\x19=j\x1a\xd8\x0e\xbb\xc0\x92\x9cJ)\xfd7'
+b'\x8c\x88\xb5\xe09\xf1\xc1\xee\x1e\xee\x04DK\xfe\xf4n\xe1\xb4\xeb\xbbu!\xa9\x94C5\x85\xfa7\xd9\x8bt_\x0bh;\xf2\x92H\xe5\xd3'
+b'\xe4\xd0\x81(+\x00\xa2\xc9Qe\xe5\xb8\xbe\x1cSv.\x88\xea^\xd0E(\xc8\xc6a'
+b"\xc87'0\xf8F\xb4'\xad\x18u\xd7\xd2i\xdd~L\xcb\x95\xbb=gR\xe6\n\x13!"
+b"OY\x05\t\xad\xb2pQ\xb3\x92\xc0['Tl\xdf:\x8a\xab\x03\x83\xc4\xb9\xfc\xfc"
+b'a verde jara fresca del rio'
+b'^>D\xc7I\x01}H\x0e\xd2f~\xd6\xf1\n\xfe\xddz\x930fO\xdb\x11\x8e\x87D\xa74\x94\x85\x17\r\xd0t\x1f\x05<\x08'
+b'\x8b\x0b\xce;x\x81&\xd2u\xe1_C80\x98\xff\xf3\x11\x9a\xd9\x0f\x97\xad8\r'
+b'\xa6\xde\xe9\xaf\xc2\x14\xd8+\x07T\xda\x11\xef\xa6\x12\xf1;.A\x1c\x0c$p'
+b'\xc5s+]\r\xd6\xf5\xc4\xa6\x90\x94\xbc\xa9\x86\xf9\x89\x9b'
+b'\xbc\xfb3\n]=\x02\xdaHi\x82P\x8b@\xbb\xde\xe3\x81\xfd\xd5\xfd\xcfA\x84\x13\x15\xa4\xf9\xd5\xc3\x11\x98\x90@\x13\xfe\xcf\xadx\xe6W\xf8\x84'
+b'n\xfeQ\x0f\xc4\xa6\xb3/=\x19\x82j%r\xc9K\xc8/\x1ad\x96\xe3\xd7'
+b'mg\xf3"C|Se\x1cY:\xf6\x1a!\xc3\x15\xcc\x97\xaa\x1d7[y\x1c\xcc'
+b'\xc8\x1ffcy\xb6\x98\x92\xb1t\x14\xbb\x85\xb5d\xe8_\x14\xc7\xd5\x0c4\xf7\x87B'
+b'\xc9\xe6(\x15%\xb6\xdf\xd01\xc9\xe0\x8c\xb2\xf7\xf1\x04\xe7\xc7\x002\x89\t'
+b'\xb5U\x86\xac\xceW}`\x8asf3"\x95\xaaO\xe2WG\xbc\xea'
+b'\xbd^F5\xcdX\xb3\xecG\xabD\x93\xe3\x9a]=\xbd\xc5d&\x02\xd0\x0b\xde\x05\x1ca\x95\x1f'
+b'\x807j\xc1T\x1f8l\xf8\xa8x\xbb"m\xe1\x9cb\x14\x9f\x87C\x9a\x1d\xdf\xa62\xf7\xf0\x07X2\xb6\xf3\xa9\xbe'
+b'%{\xed\xc3c\xea\xd9\xb0\xcd\xcc(f\x95\\\x80_(\x1c\xa5\x93\x08E\r\xf5\xad<\xd3\x99\xf5w\x04\x9f\xf1\r\xb3\xcf\xf8'
+b'E\xbd\xb7\x9f\xdbf\x1b\n\x01\xe0\xcdx\xaf\xc1\xef\xc2\xd3\xa2\x13\xe0\xac\x1e\x9bYNXS\x8d'
+b'jZ\x99\xdaUC\xbc^\xe1\xbaC\x87\xddw\xa3\xcb\xd2DYV]0x$;\x17\xf9\x19?\x0e\x08\xb9Z\x951^\x847\x8f\x16\xbb._\xc0\xad'
+b'X9s\xf8\x04u\x08\xb3\x81S\x04cs\xd3\xa7\x02l(\xb3\xb2\x9dY\xfb\xf5^\xa0'
+b'\x08C4\xe3\x00\xaa(\xad\xe4P\x96\xc7\xc8\xe0K]\xbaX\x93\r\xa8\xfdD\x80\x81'
+b'\xe0\xe7\xff\xb7\x89Yg-k\xfa\x1e_\x87\xb4YG\x00x\xad@\xd9\x05&\x96\x10\x9f[\x0f\\\xed@8\xda\xdf.'
+b'?Vi\xb9\x08\x10\xc9Cn7\xe3\xdf\xef\xa3\xb2\xef\xcd1O\x06#\xb9\xf5Q\xb3\xc4\x95\x13'
+b'$Wv\xe2\xcf\x18\x87\xace(Vg\xf0\x85p\xfaN\xdc\xd7V\xaa\rW'
+b'FBJk$\x91x\xcca\xc5\xa0r\xb8C\xaa|0O\x1d\x95#\xd4\xd6-\xa3\x98\xf3'
+b'\xea\xf5\xe1\x1fl$\xd2\x15\r\r<\xec!Kj\x94\xccJ\xd5\xe4v\x1a@w\xd9\r\x88\x7f\xf6\xf5x\x89\x04\x0ezp\x84K'
+b'\x1cC\xd9\xcb\xb4+m\x96\xc3\x98\x96\x1b\xdd\x16\x93\x0bh\x9a\xc8\xce\x90H\xdd\xe4j!N\x13&p\xe5m\xcd\\'
+b'%\x14\x1e\x98\x9aFb\x12\xaaKS\xe6\x10\xe1\xce\xad\x81-\x0c\xa2\x03\xf8m/\x1f\xe4}\xb9\xa4\xea\x02\xe2\xef\xff%'
+b'\xfe\xd7\nM7\xe4\xb1\x02\x13\xf3\xef\x05\xbfD\xfb\x8e)FT\xa3\x88\x00\xbe'
+b'\xb8f\xcd\xa7$)\xa2 4\x8a\xad\xa9\xfb\x08Ho\xdbo\xf7\x905\x0c\xd9\xe6\xa7\x8a\xf5\xec\xcc5\x80\xbe\xc9E\x7f\xf2'
+b'\xeb\x18^\x17\xa8\x18[\xaf\x94\xb1\x1d\xf8\xaf]\x89!\nHI\xf1\x89Bh\x87\xb4\xdf\xbf\xe1\x90\x01\xa2\xb2'
+```
+
+So ... the "pivot" is either 3 or 12 (13th line - 1 since first element is 0)
+
+To decrypt everything, key needs to be generated on the fly, per line, starting from line 12 (or 3):
+```
+def key(nextc1, klen):
+	k1 = ''
+	for i in range(klen):
+		k1 += ABC[nextc1]
+		nextc1 = (BAD_NUML * nextc1) % al
+	return k1, nextc1
+
+pivot = 12
+ABC="PQR9STrstuv5wxUV3WXL6MNO0abc2dYZABCDE4fghij7klmnF1GHIJKeo8pqyz"
+BAD_NUMO=152
+BAD_NUML=167
+al=len(ABC)
+nextc = BAD_NUMO % al
+
+with open('/home/tt/Documents/plain/ib-ctf-2020/re/200-pivot/attachments/important.bin', 'r'):
+	a = fp.read()
+	
+contentlines = a.splitlines()
+
+for i in range(pivot, len(contentlines)):
+	i = unhexlify(contentlines[i])
+	k, nextc = key(nextc, len(i))
+	print(ARC4.new(k).decrypt(i))
+```
+
+And we get the flag:
+```
+b'a verde jara fresca del rio'
+b"i just want to tell you how i'm feeling"
+b'gotta make you understand'
+b'deine seele ist so gros'
+b'colomitos lejanos'
+b'but the kasachok he danced really wunderbar'
+b'never gonna give you up'
+b'Guadalajara, Guadalajara!'
+b'never gonna let you down!'
+b'who would heal her son'
+b'tor zur Vergangenheit'
+b'tienes el alma de provinciana'
+b'auf dein wohl bruder, hey bruder ho'
+b'never gonna run around and desert you'
+b'bis der Tisch zusammenbricht'
+b'ibctf{M0sk4u-r4sput1n-gonna_give-Gu4d4l4j4r4}'
+b'no nos dejaba ir a Zapopan'
+b'never gonna make you cry!'
+b'but he also was the kind of teacher'
+b'inolvidables como las tardes'
+b'never gonna say goodbye'
+b'son mil palomas tu caser\xc3\xado'
+b'for the queen he was no wheeler dealer'
+b'natascha ha,ha, ha, du bist schon '
+b'never gonna tell a lie and hurt you'
+b'ojitos de agua hermanos'
+b'there was a cat that really was gone'
+b'hueles a limpio, a rosa temprana'
+```
+
+It is also possible to get the flag by running the `pfs` binary multiple times until pivot number aligns.

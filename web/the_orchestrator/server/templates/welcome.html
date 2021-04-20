@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block header %}
+  <h1>{% block title %}Welcome{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+  <p>
+  	Congratulations! The IoT orchestrator works!
+  </p>
+  <p>
+  	<ul>
+  		<li>To know how to use this app, read the <a href="{{ url_for('docs') }}">documentation</a></li>
+  		<li>If you want to start managing your device, go to <a href="{{ url_for('manage') }}">manage</a></li>
+  		<li>To reconfigure this orchestrator instance, visit <a href="{{ url_for('config') }}">configuration</a></li>
+  	</ul>
+  </p>
+{% endblock %}

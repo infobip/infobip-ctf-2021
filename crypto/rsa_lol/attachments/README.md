@@ -1,0 +1,3 @@
+Got this script from the web and I had to change the totient function because of this custom test ...
+
+Is this RSA ??? lolllll
